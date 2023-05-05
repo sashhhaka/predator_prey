@@ -1,0 +1,124 @@
+// Alexandra Vabnits
+
+#include <iostream>
+#include <vector>
+#include <iomanip>
+#include <valarray>
+
+#ifdef WIN32
+    #define GNUPLOT_NAME "C:\\gnuplot\\bin\\gnuplot -persist"
+#else
+    #define GNUPLOT_NAME "gnuplot -persist"
+#endif
+
+using namespace std;
+
+double v(double v0, double k0, double a1, double b1, double a2, double b2, double t) {
+    double result = a2 / b2 + (v0 - a2 / b2) * cos(sqrt(a1 * a2) * t) -
+                    (k0 - a1 / b1) * ((sqrt(a2) * b1) / (b2 * sqrt(a1))) * sin(sqrt(a1 * a2) * t);
+    if (result < 0) {
+        return 0;
+    }
+    return result;
+}
+
+
+double k(double v0, double k0, double a1, double b1, double a2, double b2, double t) {
+    double result = a1 / b1 + (k0 - a1 / b1) * cos(sqrt(a1 * a2) * t) +
+                    (v0 - a2 / b2) * ((sqrt(a1) * b2) / (b1 * sqrt(a2))) * sin(sqrt(a1 * a2) * t);
+    if (result < 0) {
+        return 0;
+    }
+    return result;
+}
+
+int main() {
+
+    #ifdef WIN32
+        FILE* pipe = _popen(GNUPLOT_NAME, "w");
+    #else
+        FILE* pipe = popen(GNUPLOT_NAME, "w");
+    #endif
+    double v0, k0, a1, b1, a2, b2, t, n;
+    cin >> v0 >> k0 >> a1 >> b1 >> a2 >> b2 >> t >> n;
+
+    double h = t / n;
+
+    cout << fixed << setprecision(2);
+
+    // initialize array of values
+    vector<double> time(n + 1);
+    vector<double> victims(n + 1);
+    vector<double> killers(n + 1);
+
+    for (int i = 0; i <= n; i++) {
+        // put values into an array
+        time[i] = i * h;
+        victims[i] = v(v0, k0, a1, b1, a2, b2, i * h);
+        killers[i] = k(v0, k0, a1, b1, a2, b2, i * h);
+    }
+
+    // print the values in array
+    cout << "t: " << endl;
+    for (double i : time) {
+        cout << i << " ";
+    }
+    cout << endl;
+    cout << "v: " << endl;
+    for (double victim : victims) {
+        cout << victim << " ";
+    }
+    cout << endl;
+    cout << "k: " << endl;
+    for (double killer : killers) {
+        cout << killer << " ";
+    }
+    cout << endl;
+
+    // print two plots with gnuplot v(t) and k(t)
+    // draw two plots in one window
+    // increase the size of the plot
+    fprintf(pipe, "set terminal wxt size 1200,600\n");
+    // put 2 plots in 1 line
+    fprintf(pipe, "set multiplot layout 1,2\n");
+    fprintf(pipe, "set grid\n");
+    fprintf(pipe, "set xlabel 't'\n");
+    fprintf(pipe, "set key outside\n");
+    fprintf(pipe, "set xlabel 't'\n");
+    fprintf(pipe, "set ylabel 'quantity'\n");
+    fprintf(pipe, "set key outside\n");
+    fprintf(pipe, "set pointsize 0.9\n");
+
+    fprintf(pipe, "plot '-' with linespoints pointtype 1 title 'v(t)', "
+                  "'-' with linespoints pointtype 1 title 'k(t)'\n");
+    for (int i = 0; i <= n; i++) {
+        fprintf(pipe, "%lf %lf\n", time[i], victims[i]);
+    }
+    fprintf(pipe, "e\n");
+    for (int i = 0; i <= n; i++) {
+        fprintf(pipe, "%lf %lf\n", time[i], killers[i]);
+    }
+    fprintf(pipe, "e\n");
+
+    // draw v(k) plot
+    fprintf(pipe, "set grid\n");
+    fprintf(pipe, "set title 'v(k)'\n");
+    fprintf(pipe, "set xlabel 'k'\n");
+    fprintf(pipe, "set ylabel 'v'\n");
+    fprintf(pipe, "set key outside\n");
+    // draw both plot with lines and points in one window v(k)
+    fprintf(pipe, "set pointsize 0.9\n");
+    fprintf(pipe, "plot '-' with linespoints pointtype 1 title 'v(k)'\n");
+    for (int i = 0; i <= n; i++) {
+        fprintf(pipe, "%lf %lf\n", killers[i], victims[i]);
+    }
+
+    fprintf(pipe, "e\n");
+    fflush(pipe);
+    #ifdef WIN32
+        _pclose(pipe);
+    #else
+        pclose(pipe);
+    #endif
+    return 0;
+}
